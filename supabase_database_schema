@@ -1,0 +1,304 @@
+-- Enable the pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Users table (extends Supabase auth.users)
+CREATE TABLE users (
+  id UUID REFERENCES auth.users NOT NULL PRIMARY KEY,
+  email TEXT NOT NULL,
+  full_name TEXT,
+  avatar_url TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for users
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own data" ON users
+  FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update their own data" ON users
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Projects table
+CREATE TABLE projects (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  client_name TEXT NOT NULL,
+  industry TEXT,
+  description TEXT,
+  due_date DATE,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_by UUID REFERENCES users(id) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for projects
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view projects they created" ON projects
+  FOR SELECT USING (auth.uid() = created_by);
+CREATE POLICY "Users can update projects they created" ON projects
+  FOR UPDATE USING (auth.uid() = created_by);
+CREATE POLICY "Users can delete projects they created" ON projects
+  FOR DELETE USING (auth.uid() = created_by);
+CREATE POLICY "Users can insert projects" ON projects
+  FOR INSERT WITH CHECK (auth.uid() = created_by);
+
+-- Project collaborators junction table
+CREATE TABLE project_collaborators (
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'viewer',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  PRIMARY KEY (project_id, user_id)
+);
+
+-- RLS Policies for project_collaborators
+ALTER TABLE project_collaborators ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Project creators can manage collaborators" ON project_collaborators
+  USING (EXISTS (
+    SELECT 1 FROM projects WHERE id = project_id AND created_by = auth.uid()
+  ));
+CREATE POLICY "Users can view their collaborations" ON project_collaborators
+  FOR SELECT USING (user_id = auth.uid());
+
+-- RFPs table
+CREATE TABLE rfps (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',
+  due_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for RFPs
+ALTER TABLE rfps ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view RFPs for their projects" ON rfps
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM projects WHERE id = project_id AND created_by = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM project_collaborators WHERE project_id = rfps.project_id AND user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Project owners can manage RFPs" ON rfps
+  USING (
+    EXISTS (
+      SELECT 1 FROM projects WHERE id = project_id AND created_by = auth.uid()
+    )
+  );
+
+-- Sections table
+CREATE TABLE sections (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  rfp_id UUID REFERENCES rfps(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  order_index INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for sections
+ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view sections for their RFPs" ON sections
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM rfps 
+      JOIN projects ON rfps.project_id = projects.id
+      WHERE rfps.id = sections.rfp_id AND projects.created_by = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM rfps
+      JOIN project_collaborators ON rfps.project_id = project_collaborators.project_id
+      WHERE rfps.id = sections.rfp_id AND project_collaborators.user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Project owners can manage sections" ON sections USING (
+  EXISTS (
+    SELECT 1 FROM rfps
+    JOIN projects ON rfps.project_id = projects.id
+    WHERE rfps.id = sections.rfp_id AND projects.created_by = auth.uid()
+  )
+);
+
+-- Questions table
+CREATE TABLE questions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  section_id UUID REFERENCES sections(id) ON DELETE CASCADE,
+  text TEXT NOT NULL,
+  category TEXT,
+  tags TEXT[],
+  order_index INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for questions
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view questions for their sections" ON questions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM sections
+      JOIN rfps ON sections.rfp_id = rfps.id
+      JOIN projects ON rfps.project_id = projects.id
+      WHERE sections.id = questions.section_id AND projects.created_by = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM sections
+      JOIN rfps ON sections.rfp_id = rfps.id
+      JOIN project_collaborators ON rfps.project_id = project_collaborators.project_id
+      WHERE sections.id = questions.section_id AND project_collaborators.user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Project owners can manage questions" ON questions USING (
+  EXISTS (
+    SELECT 1 FROM sections
+    JOIN rfps ON sections.rfp_id = rfps.id
+    JOIN projects ON rfps.project_id = projects.id
+    WHERE sections.id = questions.section_id AND projects.created_by = auth.uid()
+  )
+);
+
+-- Question embeddings table
+CREATE TABLE question_embeddings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
+  embedding vector(1536) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for question_embeddings
+ALTER TABLE question_embeddings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view embeddings for their questions" ON question_embeddings
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM questions
+      JOIN sections ON questions.section_id = sections.id
+      JOIN rfps ON sections.rfp_id = rfps.id
+      JOIN projects ON rfps.project_id = projects.id
+      WHERE questions.id = question_embeddings.question_id AND projects.created_by = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM questions
+      JOIN sections ON questions.section_id = sections.id
+      JOIN rfps ON sections.rfp_id = rfps.id
+      JOIN project_collaborators ON rfps.project_id = project_collaborators.project_id
+      WHERE questions.id = question_embeddings.question_id AND project_collaborators.user_id = auth.uid()
+    )
+  );
+
+-- Answers table
+CREATE TABLE answers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
+  text TEXT NOT NULL,
+  match_score FLOAT,
+  status TEXT NOT NULL DEFAULT 'draft',
+  created_by UUID REFERENCES users(id) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for answers
+ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view answers for their questions" ON answers
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM questions
+      JOIN sections ON questions.section_id = sections.id
+      JOIN rfps ON sections.rfp_id = rfps.id
+      JOIN projects ON rfps.project_id = projects.id
+      WHERE questions.id = answers.question_id AND (projects.created_by = auth.uid() OR answers.created_by = auth.uid())
+    ) OR EXISTS (
+      SELECT 1 FROM questions
+      JOIN sections ON questions.section_id = sections.id
+      JOIN rfps ON sections.rfp_id = rfps.id
+      JOIN project_collaborators ON rfps.project_id = project_collaborators.project_id
+      WHERE questions.id = answers.question_id AND project_collaborators.user_id = auth.uid()
+    )
+  );
+CREATE POLICY "Users can manage their answers" ON answers USING (
+  created_by = auth.uid() OR EXISTS (
+    SELECT 1 FROM questions
+    JOIN sections ON questions.section_id = sections.id
+    JOIN rfps ON sections.rfp_id = rfps.id
+    JOIN projects ON rfps.project_id = projects.id
+    WHERE questions.id = answers.question_id AND projects.created_by = auth.uid()
+  )
+);
+
+-- Historical answers table
+CREATE TABLE historical_answers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  question_text TEXT NOT NULL,
+  answer_text TEXT NOT NULL,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  tags TEXT[],
+  quality_score FLOAT,
+  used_count INTEGER DEFAULT 0,
+  question_embedding vector(1536),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- RLS Policies for historical_answers
+ALTER TABLE historical_answers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view historical answers" ON historical_answers
+  FOR SELECT USING (
+    project_id IS NULL OR EXISTS (
+      SELECT 1 FROM projects
+      WHERE id = historical_answers.project_id AND created_by = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM project_collaborators
+      WHERE project_id = historical_answers.project_id AND user_id = auth.uid()
+    )
+  );
+
+-- Create indexes for performance
+CREATE INDEX idx_questions_section_id ON questions(section_id);
+CREATE INDEX idx_answers_question_id ON answers(question_id);
+CREATE INDEX idx_historical_answers_tags ON historical_answers USING GIN(tags);
+
+-- Create vector index for similarity search
+CREATE INDEX idx_question_embeddings_embedding ON question_embeddings USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX idx_historical_answers_embedding ON historical_answers USING ivfflat (question_embedding vector_cosine_ops);
+
+-- Function to automatically update timestamps
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Add triggers for updated_at columns
+CREATE TRIGGER set_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER set_projects_updated_at
+  BEFORE UPDATE ON projects
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER set_rfps_updated_at
+  BEFORE UPDATE ON rfps
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER set_sections_updated_at
+  BEFORE UPDATE ON sections
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER set_questions_updated_at
+  BEFORE UPDATE ON questions
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER set_answers_updated_at
+  BEFORE UPDATE ON answers
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at();

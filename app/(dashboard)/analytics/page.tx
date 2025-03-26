@@ -1,0 +1,29 @@
+import { Suspense } from 'react';
+import { AnalyticsHeader } from '@/components/analytics/AnalyticsHeader';
+import { MetricCards } from '@/components/analytics/MetricCards';
+import { CompletionTimeChart } from '@/components/analytics/CompletionTimeChart';
+import { CategoryMatchChart } from '@/components/analytics/CategoryMatchChart';
+import { IndustryPerformanceTable } from '@/components/analytics/IndustryPerformanceTable';
+import { AnalyticsSkeleton } from '@/components/ui/skeletons';
+
+export default function AnalyticsPage() {
+  return (
+    <div className="space-y-6">
+      <AnalyticsHeader />
+      
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <MetricCards />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CompletionTimeChart />
+          <CategoryMatchChart />
+        </div>
+        
+        <div className="bg-white rounded-lg border p-6">
+          <h2 className="text-lg font-bold mb-4">RFP Performance by Industry</h2>
+          <IndustryPerformanceTable />
+        </div>
+      </Suspense>
+    </div>
+  );
+}
