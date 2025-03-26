@@ -1,12 +1,8 @@
-// Placeholder for supabase sections module
-export async function getSectionById(sectionId: string) {
-  // This would normally fetch from Supabase
+export async function getSectionById(id: string) {
   return {
-    id: sectionId,
+    id,
     name: 'Section Name',
-    rfp_id: 'rfp-id',
-    order: 1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    rfp_id: 'rfp-123',
+    order: 1
   };
 }
