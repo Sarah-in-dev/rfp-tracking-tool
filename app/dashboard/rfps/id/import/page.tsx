@@ -2,7 +2,13 @@
 
 import React from 'react';
 
-export default function ImportPage({ params }) {
+interface ImportPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function ImportPage({ params }: ImportPageProps) {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold">RFP Import</h1>
