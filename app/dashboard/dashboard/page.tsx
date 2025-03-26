@@ -1,16 +1,15 @@
 import { Suspense } from 'react';
 import { RfpCard } from '@/components/rfps/RfpCard';
-//import { /* ActivityFeed */ } from '@/components/dashboard//* ActivityFeed */';
-import { /* StatsCards */ } from '@/components/dashboard//* StatsCards */';
-import { /* DashboardHeader */ } from '@/components/dashboard//* DashboardHeader */';
-import { /* DashboardSkeleton */ } from '@/components/ui/skeletons';
 
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      </* DashboardHeader */ />
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded">+ New RFP</button>
+      </div>
       
-      <Suspense fallback={</* DashboardSkeleton */ />}>
+      <Suspense fallback={<div className="animate-pulse">Loading...</div>}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* RFP Cards would be fetched and rendered here */}
           <RfpCard 
@@ -42,10 +41,37 @@ export default function DashboardPage() {
           />
         </div>
         
-       {/* </* ActivityFeed */ /> */}
+        <div className="bg-white p-4 rounded shadow mt-6">
+          <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
+          <ul className="space-y-3">
+            <li className="p-3 border-b">
+              <p className="font-medium">Imported 127 questions</p>
+              <p className="text-sm text-gray-500">10 minutes ago</p>
+            </li>
+            <li className="p-3 border-b">
+              <p className="font-medium">Matched 89 historical answers</p>
+              <p className="text-sm text-gray-500">8 minutes ago</p>
+            </li>
+            <li className="p-3">
+              <p className="font-medium">Added new RFP</p>
+              <p className="text-sm text-gray-500">1 hour ago</p>
+            </li>
+          </ul>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          </* StatsCards */ />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="font-bold">Active RFPs</h2>
+            <p className="text-2xl font-bold">3</p>
+          </div>
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="font-bold">Open Questions</h2>
+            <p className="text-2xl font-bold">295</p>
+          </div>
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="font-bold">Historical Answers</h2>
+            <p className="text-2xl font-bold">1,482</p>
+          </div>
         </div>
       </Suspense>
     </div>
