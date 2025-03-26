@@ -1,16 +1,16 @@
 import { Suspense } from 'react';
 import { RfpCard } from '@/components/rfps/RfpCard';
-//import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
-import { StatsCards } from '@/components/dashboard/StatsCards';
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { DashboardSkeleton } from '@/components/ui/skeletons';
+//import { /* ActivityFeed */ } from '@/components/dashboard//* ActivityFeed */';
+import { /* StatsCards */ } from '@/components/dashboard//* StatsCards */';
+import { /* DashboardHeader */ } from '@/components/dashboard//* DashboardHeader */';
+import { /* DashboardSkeleton */ } from '@/components/ui/skeletons';
 
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      <DashboardHeader />
+      </* DashboardHeader */ />
       
-      <Suspense fallback={<DashboardSkeleton />}>
+      <Suspense fallback={</* DashboardSkeleton */ />}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* RFP Cards would be fetched and rendered here */}
           <RfpCard 
@@ -42,10 +42,10 @@ export default function DashboardPage() {
           />
         </div>
         
-       {/* <ActivityFeed /> */}
+       {/* </* ActivityFeed */ /> */}
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCards />
+          </* StatsCards */ />
         </div>
       </Suspense>
     </div>

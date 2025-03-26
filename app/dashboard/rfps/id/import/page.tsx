@@ -2,23 +2,23 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-//import { ImportHeader } from '@/components/rfps/ImportHeader';
-//import { FileUpload } from '@/components/rfps/FileUpload';
-//import { ExtractedQuestions } from '@/components/rfps/ExtractedQuestions';
-//import { ImportStats } from '@/components/rfps/ImportStats';
+//import { /* ImportHeader */ } from '@/components/rfps//* ImportHeader */';
+//import { /* FileUpload */ } from '@/components/rfps//* FileUpload */';
+//import { /* ExtractedQuestions */ } from '@/components/rfps//* ExtractedQuestions */';
+//import { /* ImportStats */ } from '@/components/rfps//* ImportStats */';
 
 export default function ImportPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
-  const [extractedQuestions, setExtractedQuestions] = useState([]);
+  const [extractedQuestions, set/* ExtractedQuestions */] = useState([]);
   const [extractionStats, setExtractionStats] = useState({
     totalQuestions: 0,
     sectionsDetected: 0,
     confidence: 0
   });
   
-  const handleFileUpload = (file: File) => {
+  const handle/* FileUpload */ = (file: File) => {
     setFile(file);
     // In a real implementation, you would send this to your API
     // and process it, then update the state with the results
@@ -35,7 +35,7 @@ export default function ImportPage({ params }: { params: { id: string } }) {
     // });
     
     // For demo purposes, we'll set some mock data
-    setExtractedQuestions([
+    set/* ExtractedQuestions */([
       { id: 1, text: 'Describe your company background and experience...', section: 'Company' },
       { id: 2, text: 'Detail your approach to government IT modernization...', section: 'Technical' },
       { id: 3, text: 'Explain your cloud security measures for government...', section: 'Technical' },
@@ -56,7 +56,7 @@ export default function ImportPage({ params }: { params: { id: string } }) {
   
   return (
     <div className="space-y-6">
-      {/* <ImportHeader 
+      {/* </* ImportHeader */ 
         rfpId={params.id}
         currentStep={currentStep}
       /> */}
@@ -65,8 +65,8 @@ export default function ImportPage({ params }: { params: { id: string } }) {
         {currentStep === 1 && (
           <div>
             <h2 className="text-lg font-bold mb-4">Uploaded Document</h2>
-            {/* <FileUpload 
-              onFileUpload={handleFileUpload}
+            {/* </* FileUpload */ 
+              on/* FileUpload */={handle/* FileUpload */}
               file={file}
               onExtract={handleExtractQuestions}
             /> */}
@@ -76,10 +76,10 @@ export default function ImportPage({ params }: { params: { id: string } }) {
         {currentStep === 2 && (
           <>
             <h2 className="text-lg font-bold mb-4">Extracted Questions</h2>
-            {/* <ExtractedQuestions questions={extractedQuestions} />*/}
+            {/* </* ExtractedQuestions */ questions={extractedQuestions} />*/}
             
             <div className="grid grid-cols-3 gap-6 mt-6">
-             {/* <ImportStats stats={extractionStats} /> */}
+             {/* </* ImportStats */ stats={extractionStats} /> */}
             </div>
             
             <div className="flex justify-end space-x-4 mt-8">

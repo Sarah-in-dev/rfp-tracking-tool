@@ -1,56 +1,43 @@
-import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import React from 'react';
 
-interface RfpCardProps {
-  id: string;
-  title: string;
-  client: string;
-  progress: number;
-  dueDate: string;
-  status: 'active' | 'draft' | 'completed' | 'lost';
-  questionCount: number;
-}
-
-export function RfpCard({
-  id,
-  title,
-  client,
-  progress,
-  dueDate,
-  status,
-  questionCount
-}: RfpCardProps) {
+export function RfpCard({ 
+  id, 
+  title, 
+  client, 
+  progress, 
+  dueDate, 
+  status, 
+  questionCount 
+}) {
   const statusColors = {
-    active: 'bg-emerald-50 text-emerald-600',
-    draft: 'bg-amber-50 text-amber-600',
-    completed: 'bg-blue-50 text-blue-600',
-    lost: 'bg-gray-50 text-gray-600'
+    active: 'bg-green-100 text-green-800',
+    draft: 'bg-yellow-100 text-yellow-800',
+    completed: 'bg-blue-100 text-blue-800',
+    lost: 'bg-gray-100 text-gray-800'
   };
   
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-6 space-y-4">
-        <h3 className="font-bold text-base truncate">{title}</h3>
-        <p className="text-sm text-gray-500">Client: {client}</p>
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="p-6 space-y-4">
+        <h3 className="font-bold text-lg truncate">{title}</h3>
+        <p className="text-gray-500">Client: {client}</p>
         
-        <Progress value={progress} className="h-2" />
-        <p className="text-sm text-gray-500">{progress}% Complete</p>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+        </div>
+        <p className="text-gray-500">{progress}% Complete</p>
         
-        <p className="text-sm text-gray-500">Due: {dueDate}</p>
+        <p className="text-gray-500">Due: {dueDate}</p>
         
-        <Badge variant="outline" className={statusColors[status]}>
+        <span className={`inline-block px-3 py-1 rounded-full text-sm ${statusColors[status] || statusColors.active}`}>
           {status.charAt(0).toUpperCase() + status.slice(1)}
-        </Badge>
-      </CardContent>
+        </span>
+      </div>
       
-      <CardFooter className="px-6 py-4 border-t flex justify-between">
-        <span className="text-sm text-gray-500">{questionCount} Questions</span>
-        <Link href={`/rfps/${id}`} className="text-blue-600 text-sm">
-          View →
-        </Link>
-      </CardFooter>
-    </Card>
+      <div className="px-6 py-4 bg-gray-50 border-t flex justify-between">
+        <span className="text-gray-500">{questionCount} Questions</span>
+        <a href={`/rfps/${id}`} className="text-blue-600">View →</a>
+      </div>
+    </div>
   );
 }
